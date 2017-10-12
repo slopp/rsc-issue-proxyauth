@@ -1,0 +1,32 @@
+version: '2'
+services:
+ rsc-proxy-auth:
+    image: wingedkiwi/oauth2-proxy
+    environment:
+      # .env file with ENV_VAR_NAME=value, one per line.
+      - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_PROXY_CLIENT_ID}
+      - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+    command: 
+      - oauth2_proxy
+      - --provider=google
+      - --http-address=http://0.0.0.0:80
+      - --upstream=http://rsc:3939/
+      - --redirect-url=http://localhost/oauth2/callback
+      - --email-domain=* 
+      - -cookie-secure=false
+    ports:
+      - "80:80"
+ rsc:
+    build:
+      context: ./rsc
+      args:
+      - CONNECT_BINARY_URL
+    command: dumb-init ./scripts/start-licensed.sh /opt/rstudio-connect/bin/connect --config ./config/development.gcfg
+    privileged: true
+    volumes:
+      - ./rsc:/connect
+    depends_on:
+      - rsc-proxy-auth
+    environment:
+      - CONNECT_LICENSE=${CONNECT_LICENSE}
